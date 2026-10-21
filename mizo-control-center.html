@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mizo Control Center</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; font-family: system-ui, sans-serif; background:#101827; color:#f4f7fb; }
+  header { padding:24px 18px; background:#17243a; border-bottom:1px solid #34445e; }
+  h1 { margin:0 0 6px; font-size:1.8rem; }
+  p { line-height:1.5; color:#c7d2e2; }
+  main { max-width:760px; margin:auto; padding:18px; }
+  .card { background:#1a2940; border:1px solid #34445e; border-radius:16px; padding:18px; margin:14px 0; }
+  button, a.button { display:inline-block; border:0; border-radius:10px; padding:12px 16px; margin:5px 5px 5px 0; background:#4c8dff; color:white; font-weight:650; text-decoration:none; cursor:pointer; }
+  button.secondary { background:#34445e; }
+  textarea, input { box-sizing:border-box; width:100%; padding:12px; border-radius:8px; border:1px solid #526681; background:#0d1523; color:#fff; }
+  #output { white-space:pre-wrap; min-height:2em; }
+  small { color:#aebed2; }
+</style>
+</head>
+<body>
+<header><h1>🧩 Mizo Control Center</h1><p>A personal dashboard for safe shortcuts and notes.</p></header>
+<main>
+  <section class="card">
+    <h2>Quick actions</h2>
+    <button onclick="showTime()">Show date &amp; time</button>
+    <button class="secondary" onclick="openNotes()">Open notes</button>
+    <button class="secondary" onclick="speakHelp()">Speak help</button>
+    <p id="output" aria-live="polite">Choose a button to get started.</p>
+  </section>
+  <section class="card">
+    <h2>Notes</h2>
+    <textarea id="notes" rows="5" placeholder="Write a note here..."></textarea>
+    <button onclick="saveNote()">Save note on this device</button>
+    <button class="secondary" onclick="loadNote()">Load saved note</button>
+    <p><small>Notes are stored in this browser on this device. They are not sent to a server.</small></p>
+  </section>
+  <section class="card">
+    <h2>Voice commands</h2>
+    <p>Try saying “show date and time”, “open notes”, or “help”. Speech recognition depends on browser support.</p>
+    <button onclick="startVoice()">🎙️ Speak and do</button>
+    <p id="voiceStatus" aria-live="polite">Voice commands are limited to actions inside this page.</p>
+  </section>
+  <section class="card">
+    <h2>Download this page</h2>
+    <p>You can download a copy of this dashboard as an HTML file.</p>
+    <a class="button" href="mizo-control-center.html" download="mizo-control-center.html">Download Mizo Control Center</a>
+    <p><small>This page cannot control your whole tablet or bypass device permissions.</small></p>
+  </section>
+</main>
+<script>
+const output = document.getElementById('output');
+function showTime() { output.textContent = 'Your device date and time: ' + new Date().toLocaleString(); }
+function openNotes() { document.getElementById('notes').focus(); output.textContent = 'Notes box selected.'; }
+function speakHelp() {
+  output.textContent = 'You can show date and time, open notes, or save and load a note.';
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(output.textContent);
+    speechSynthesis.speak(u);
+  }
+}
+function saveNote() {
+  try { localStorage.setItem('mizo-control-center-note', document.getElementById('notes').value); output.textContent = 'Note saved in this browser on this device.'; }
+  catch(e) { output.textContent = 'This browser did not allow local saving. You can copy your note instead.'; }
+}
+function loadNote() {
+  try { document.getElementById('notes').value = localStorage.getItem('mizo-control-center-note') || ''; output.textContent = 'Saved note loaded.'; }
+  catch(e) { output.textContent = 'This browser did not allow loading a saved note.'; }
+}
+function startVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { document.getElementById('voiceStatus').textContent = 'Speech recognition is not supported in this browser. The regular buttons still work.'; return; }
+  const r = new SpeechRecognition();
+  r.lang = 'en-US'; r.interimResults = false; r.maxAlternatives = 1;
+  document.getElementById('voiceStatus').textContent = 'Listening…';
+  r.onresult = e => {
+    const command = e.results[0][0].transcript.toLowerCase().trim();
+    document.getElementById('voiceStatus').textContent = 'Heard: “' + command + '”';
+    if (command.includes('time') || command.includes('date')) showTime();
+    else if (command.includes('note')) openNotes();
+    else if (command.includes('help')) speakHelp();
+    else output.textContent = 'That command is not available yet. Try “show date and time”, “open notes”, or “help”.';
+  };
+  r.onerror = () => document.getElementById('voiceStatus').textContent = 'Could not hear that command. You can use the regular buttons.';
+  r.start();
+}
+</script>
+</body>
+</html>
